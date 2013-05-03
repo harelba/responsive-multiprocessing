@@ -58,7 +58,7 @@ class MainProcessMessageHandler(threading.Thread):
 			except:
 				traceback.print_exc(file=sys.stderr)
 
-def multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=None,check_interval=0.1,log_handler=None):
+def multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=None,log_handler=None,check_interval=0.1):
 	""" 
 	Multiprocess jobs using a closed pool, with easy ongoing messaging back to the main process.
 
@@ -72,6 +72,7 @@ def multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=No
 	msg_handler - A callback that will get the messages from the sub processes. Signature is (pid,msg_type,msg).
 	                Logging messages have a msg_type value 'log', and each message contains the tuple (timestamp,level,text)
 	log_handler - A callback specific for logging messages. Expected signature is (pid,level,text). If not provided, Logging messages will be just sent as regular messages with msg_type 'log' and a message in the format (timestamp,level,text). 
+	check_interval - The interval between checks that all jobs have been finished. Usually, no need to specify it.
 	"""
 	m = Manager()
 	queue = m.Queue()

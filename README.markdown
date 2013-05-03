@@ -5,7 +5,7 @@ Multiprocess jobs using a closed pool, with easy ongoing messaging back to the m
 
 Ongoing logging is built in on the subprocess side. The main process side should just provide a callback and wire the logged messages to their favourite logging mechanism.
 
-Useful for making use of multiple cores, while having visibility about progress
+Useful for making use of multiple cores, while having visibility about progress.
 
 ## Usage
 Call `multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=None,log_handler=None,check_interval=0.1)`
@@ -23,7 +23,7 @@ Call `multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=
 `check_interval` - The interval between checks that all jobs have been finished. Usually, no need to specify it.
 
 ## Example
-The original reason this module has been written was to parallelize checking a set of gzip files for corruption, so let's look at it as an example use case.
+The original reason this module has been written was to parallelize checking a set of gzip files for corruption, so let's look at it as an example use case. 
 
 First, let's define the actual function that does the checking. Note that it gets a filename and a msg_handler.
 The msg_handler is used inside the function in order to perform logging.
@@ -60,6 +60,28 @@ Note that the function will not return until all jobs have been performed.
 
 After execution is finished, the results variable will contain the list of return values from check_file(). In that case, it will be a list of tuples (success,filename).
 
+## Generic message passing to the main process
+The module is capable of generic message passing to the main process. The logging capabilities shown above are just a special common case.
+
+In order to pass arbitrary messages back to the main process, just use msg_handler.send_message(msg) in the subprocess function, and provide a msg_handler callback to multiprocessWithMessaging(). 
+
+The msg_handler callback signature should be (pid,msg_type,msg).
+
+### Example
+    Let's assume that a subprocess wants to send a progress indication to the main process (a number from 0 to 1). 
+
+    def msg_handler(pid,msg_type,msg):
+        print "Got message %(msg)s from pid %s" % (msg,pid)
+        # break down the message to its parts
+        progress,text = msg
+        print "Progress is %s" % progress
+
+    def my_func(...,msg_handler):
+        ...
+        msg_handler.send_message((0.4,"another part of the message"))
+        ...
+
+    multiprocessWithMessaging(4,my_func,...,msg_handler=msg_handler)
 
 ## Contact
 Any feedback would be much appreciated. 
