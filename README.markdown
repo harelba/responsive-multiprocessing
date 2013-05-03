@@ -68,7 +68,7 @@ In order to pass arbitrary messages back to the main process, just use msg_handl
 The msg_handler callback signature should be (pid,msg_type,msg).
 
 ### Example
-    Let's assume that a subprocess wants to send a progress indication to the main process (a number from 0 to 1). 
+Let's assume that a subprocess wants to send a progress indication to the main process (a number from 0 to 1). 
 
     def msg_handler(pid,msg_type,msg):
         print "Got message %(msg)s from pid %s" % (msg,pid)
@@ -82,6 +82,27 @@ The msg_handler callback signature should be (pid,msg_type,msg).
         ...
 
     multiprocessWithMessaging(4,my_func,...,msg_handler=msg_handler)
+
+### Another Example
+Another example could be an ongoing aggregation of the processing duration of all the subprocesses.
+
+    total_duration = 0
+    def msg_handler(pid,msg_type,msg):
+        duration = msg
+        total_duration += duration    
+
+    def my_func(...):
+        start_time = time.time()
+        ...
+        duration = time.time() - start_time
+        msg_handler.send_message((duration,))
+
+    multiprocessWithMessaging(8,my_func,...,msg_handler=msg_handler)
+
+    print "Total processing duration is %4.3f seconds" % total_duration 
+
+
+Note that this will provide *ongoing* duration aggregation. You could send the duration as part of the function return value, and calculate the total duration from the results, but that would mean having the total duration only at the end of the entire processing.
 
 ## Contact
 Any feedback would be much appreciated. 
