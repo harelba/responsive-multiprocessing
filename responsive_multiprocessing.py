@@ -8,6 +8,11 @@
 # Useful for making use of multiple cores, while having visibility about progress
 #
 # Author: Harel Ben-Attia (@harelba)
+#
+# https://github.com/harelba/responsive-multiprocessing
+#
+#
+
 
 import os,sys
 import time
