@@ -5,6 +5,8 @@ Multiprocess jobs using a closed pool, with easy ongoing messaging back to the m
 
 Ongoing logging is built in on the subprocess side. The main process side should just provide a callback and wire the logged messages to their favourite logging mechanism.
 
+Tracebacks in child processes are propagated automatically to the main process, as they occur.
+
 Useful for making use of multiple cores, while having visibility about progress.
 
 ## Usage
