@@ -8,7 +8,8 @@ Ongoing logging is built in on the subprocess side. The main process side should
 Useful for making use of multiple cores, while having visibility about progress.
 
 ## Usage
-Call `multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=None,log_handler=None,check_interval=0.1)`
+Call `multiprocessWithMessaging` with the following parameters:
+
 
 `process_count` - The number of processes in the pool
 
@@ -16,11 +17,13 @@ Call `multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=
 
 `func_args_list` - A list of lists, each containing a "job definition" for the func
 
-`msg_handler` - A callback that will get the messages from the sub processes. Signature is (pid,msg_type,msg). Logging messages have a msg_type value 'log', and each message contains the tuple (timestamp,level,text)
+`msg_handler` - A callback that will get the messages from the sub processes. Signature is (pid,msg_type,msg). Logging messages have a msg_type value 'log', and each message contains the tuple (timestamp,level,text). Defaults to None.
 
-`log_handler` - A callback specific for logging messages. Expected signature is (pid,level,text). If not provided, Logging messages will be just sent as regular messages with msg_type 'log' and a message in the format (timestamp,level,text). 
+`log_handler` - A callback specific for logging messages. Expected signature is (pid,level,text). If not provided, Logging messages will be just sent as regular messages with msg_type 'log' and a message in the format (timestamp,level,text). Defaults to None.
 
-`check_interval` - The interval between checks that all jobs have been finished. Usually, no need to specify it.
+`traceback_handler` - A callback for traceback propagation from the child processes to the main process. Defaults to default_traceback_handler, which just prints the traceback to standard error. Callback signature is (pid,timestamp,traceback). 
+
+`check_interval` - The interval between checks that all jobs have been finished. Defaults to 0.1 - Unless it's a special case, there is no need to specify it.
 
 ## Example
 The original reason this module has been written was to parallelize checking a set of gzip files for corruption, so let's look at it as an example use case. 

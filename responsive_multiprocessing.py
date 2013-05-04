@@ -21,6 +21,7 @@ import traceback
 import subprocess
 import threading
 import glob
+import functools
 
 class SubProcessMessageHandler(object):
 	def __init__(self,queue):
@@ -38,13 +39,17 @@ class SubProcessMessageHandler(object):
 	def _log(self,timestamp,level,text):
 		self.queue.put((os.getpid(),'log',(timestamp,level,text)))
 
+	def _traceback(self,timestamp,traceback):
+		self.queue.put((os.getpid(),'traceback',(timestamp,traceback)))
+
 class MainProcessMessageHandler(threading.Thread):
-	def __init__(self,queue,msg_handler=None,log_handler=None):
+	def __init__(self,queue,msg_handler=None,log_handler=None,traceback_handler=None):
 		threading.Thread.__init__(self)
 		self.queue = queue
 		self.daemon = True
 		self.msg_handler = msg_handler
 		self.log_handler = log_handler
+		self.traceback_handler = traceback_handler
 
 	def run(self):
 		while True:
@@ -53,9 +58,13 @@ class MainProcessMessageHandler(threading.Thread):
 				if msg_type == 'log' and self.log_handler is not None:
 					timestamp,level,text = msg
 					self.log_handler(pid,level,text)
-				else:
-					if self.msg_handler is not None:
-						self.msg_handler(pid,msg_type,msg)
+					continue
+				if msg_type == 'traceback' and self.traceback_handler is not None:
+					timestamp,traceback = msg
+					self.traceback_handler(pid,timestamp,traceback)
+					continue
+				if self.msg_handler is not None:
+					self.msg_handler(pid,msg_type,msg)
 			except (KeyboardInterrupt, SystemExit):
 				raise
 			except EOFError:
@@ -63,7 +72,26 @@ class MainProcessMessageHandler(threading.Thread):
 			except:
 				traceback.print_exc(file=sys.stderr)
 
-def multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=None,log_handler=None,check_interval=0.1):
+def default_traceback_handler(pid,timestamp,traceback):
+	print >>sys.stderr,"pid-%s has caused a traceback: %s" % (pid,traceback)
+
+class TracebackDecorator(object):
+	def __init__(self,func):
+		self.func = func
+		try:
+			functools.update_wrapper(self,func)
+		except:
+			pass
+
+	def __call__(self,*args,**kwargs):
+		msg_handler = kwargs['msg_handler']
+		try:
+			return self.func(*args,**kwargs)
+		except:
+			msg_handler._traceback(time.time(),traceback.format_exc())
+
+
+def multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=None,log_handler=None,traceback_handler=default_traceback_handler,check_interval=0.1):
 	""" 
 	Multiprocess jobs using a closed pool, with easy ongoing messaging back to the main process.
 
@@ -79,9 +107,12 @@ def multiprocessWithMessaging(process_count, func, func_args_list,msg_handler=No
 	log_handler - A callback specific for logging messages. Expected signature is (pid,level,text). If not provided, Logging messages will be just sent as regular messages with msg_type 'log' and a message in the format (timestamp,level,text). 
 	check_interval - The interval between checks that all jobs have been finished. Usually, no need to specify it.
 	"""
+
+	func = TracebackDecorator(func)
+
 	m = Manager()
 	queue = m.Queue()
-	main_process_msg_handler = MainProcessMessageHandler(queue,msg_handler,log_handler)
+	main_process_msg_handler = MainProcessMessageHandler(queue,msg_handler,log_handler,traceback_handler)
 	main_process_msg_handler.start()
 
 	pool = Pool(processes=process_count)
